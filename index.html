@@ -1399,7 +1399,8 @@ async function sendToList(list, subject, body) {
 async function sendEmail(to, subject, body) {
   const message = [
     'From: ' + state.userEmail,
-    'To: ' + to,
+    'To: ' + state.userEmail,
+    'Bcc: ' + to,
     'Subject: ' + subject,
     'Content-Type: text/plain; charset=utf-8',
     '',
