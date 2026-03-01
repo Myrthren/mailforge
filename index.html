@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailForge — Gmail Campaign Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #e8ff47;
+    --accent2: #47b8ff;
+    --danger: #ff4747;
+    --text: #f0f0f8;
+    --muted: #6b6b88;
+    --success: #47ffb8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  .app { position: relative; z-index: 1; display: flex; height: 100vh; }
+
+  .sidebar { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .logo { padding: 28px 24px 24px; border-bottom: 1px solid var(--border); }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent); }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .nav { flex: 1; padding: 16px 0; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; cursor: pointer; color: var(--muted); font-size: 13px; letter-spacing: 0.5px; transition: all 0.2s; border-left: 2px solid transparent; user-select: none; }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(232,255,71,0.05); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .gmail-section { padding: 16px; border-top: 1px solid var(--border); }
+  .gmail-btn { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+  .gmail-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .gmail-btn.connected { border-color: var(--success); color: var(--success); }
+  .gmail-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .gmail-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(10,10,15,0.8); backdrop-filter: blur(10px); }
+  .page-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
+  .page-title span { color: var(--accent); }
+  .btn { padding: 9px 18px; border-radius: 6px; border: none; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; }
+  .btn-primary { background: var(--accent); color: #0a0a0f; font-weight: 500; }
+  .btn-primary:hover { background: #d4eb2a; transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,71,71,0.3); font-size: 11px; padding: 5px 10px; }
+  .btn-danger:hover { background: rgba(255,71,71,0.1); }
+  .content { flex: 1; overflow-y: auto; padding: 32px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .setup-hero { max-width: 680px; margin: 0 auto; }
+  .setup-hero h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.1; margin-bottom: 12px; }
+  .setup-hero h2 em { color: var(--accent); font-style: normal; }
+  .setup-hero > p { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 40px; }
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: border-color 0.2s; }
+  .step:hover { border-color: rgba(232,255,71,0.2); }
+  .step-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; background: rgba(232,255,71,0.1); border: 1px solid rgba(232,255,71,0.3); color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px; }
+  .step p { color: var(--muted); font-size: 12px; line-height: 1.7; margin-bottom: 14px; }
+  .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--accent2); margin: 10px 0; word-break: break-all; }
+  .input-row { display: flex; gap: 10px; margin-top: 10px; }
+  .input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; outline: none; transition: border-color 0.2s; }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--muted); }
+
+  .lists-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .list-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: all 0.2s; }
+  .list-card:hover { border-color: rgba(232,255,71,0.25); transform: translateY(-2px); }
+  .list-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .list-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; }
+  .list-count { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 20px; }
+  .list-preview { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; min-height: 40px; }
+  .list-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-small { padding: 6px 12px; border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.2s; }
+  .btn-small:hover { color: var(--text); border-color: var(--text); }
+  .btn-small.accent { color: var(--accent); border-color: rgba(232,255,71,0.3); }
+  .btn-small.accent:hover { background: rgba(232,255,71,0.1); }
+  .new-list-card { background: transparent; border: 1px dashed var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; cursor: pointer; transition: all 0.2s; gap: 12px; }
+  .new-list-card:hover { border-color: var(--accent); background: rgba(232,255,71,0.03); }
+  .new-list-card span { font-size: 28px; color: var(--muted); }
+  .new-list-card p { font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* COMPOSE */
+  .compose-layout { display: grid; grid-template-columns: 1fr 290px; gap: 24px; max-width: 1200px; }
+  .compose-form { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  select.input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b6b88' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; }
+
+  /* ===== RICH TEXT EDITOR ===== */
+  .editor-outer { position: relative; }
+  .editor-wrapper { border: 1px solid var(--border); border-radius: 8px; overflow: visible; transition: border-color 0.2s; background: var(--bg); }
+  .editor-wrapper:focus-within { border-color: var(--accent); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 10px; background: var(--surface2); border-bottom: 1px solid var(--border); align-items: center; border-radius: 8px 8px 0 0; }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+
+  .tb-btn { width: 28px; height: 28px; border-radius: 5px; border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; font-family: 'DM Mono', monospace; position: relative; }
+  .tb-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+  .tb-btn.active { background: rgba(232,255,71,0.12); color: var(--accent); }
+  .tb-btn svg { width: 14px; height: 14px; fill: currentColor; pointer-events: none; }
+
+  .tb-select { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; padding: 3px 6px; cursor: pointer; outline: none; height: 28px; transition: border-color 0.15s; }
+  .tb-select:hover, .tb-select:focus { border-color: var(--accent2); color: var(--text); }
+
+  .tb-color-wrap { position: relative; width: 28px; height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; overflow: hidden; }
+  .tb-color-wrap:hover { background: rgba(255,255,255,0.07); }
+  .tb-color-label { font-size: 13px; color: var(--muted); pointer-events: none; position: relative; z-index: 1; }
+  .tb-color-input { opacity: 0; position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+
+  .editor-body { min-height: 260px; max-height: 400px; overflow-y: auto; padding: 14px 16px; outline: none; font-size: 14px; line-height: 1.7; color: var(--text); font-family: -apple-system, 'Segoe UI', sans-serif; border-radius: 0 0 8px 8px; }
+  .editor-body:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
+  .editor-body a { color: var(--accent2); }
+  .editor-body img { max-width: 100%; border-radius: 6px; margin: 6px 0; display: block; }
+  .editor-body ul, .editor-body ol { padding-left: 24px; }
+  .editor-body blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); margin: 8px 0; }
+
+  .attach-strip { display: none; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); border-radius: 0 0 8px 8px; }
+  .attach-strip.has-items { display: flex; }
+  .attach-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; font-size: 11px; color: var(--muted); }
+  .attach-chip img { width: 28px; height: 28px; object-fit: cover; border-radius: 3px; }
+  .attach-chip .rm { cursor: pointer; color: var(--danger); font-size: 15px; line-height: 1; }
+  .attach-chip .rm:hover { opacity: 0.7; }
+
+  /* EMOJI PICKER */
+  .emoji-picker { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; width: 296px; max-height: 280px; overflow-y: auto; z-index: 500; box-shadow: 0 16px 48px rgba(0,0,0,0.7); display: none; top: 40px; left: 0; }
+  .emoji-picker.open { display: block; }
+  .emoji-cats { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .emoji-cat-btn { background: transparent; border: none; cursor: pointer; font-size: 16px; padding: 3px 6px; border-radius: 5px; opacity: 0.55; transition: all 0.15s; }
+  .emoji-cat-btn:hover, .emoji-cat-btn.active { opacity: 1; background: rgba(255,255,255,0.07); }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+  .emoji-btn { background: transparent; border: none; cursor: pointer; font-size: 20px; padding: 4px; border-radius: 4px; transition: background 0.1s; line-height: 1; }
+  .emoji-btn:hover { background: rgba(255,255,255,0.08); }
+
+  /* LINK POPOVER */
+  .link-popover { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; width: 310px; z-index: 500; box-shadow: 0 16px 48px rgba(0,0,0,0.7); display: none; top: 40px; left: 0; }
+  .link-popover.open { display: block; }
+  .link-popover-title { font-size: 11px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .link-row { display: flex; gap: 8px; margin-top: 12px; }
+
+  .compose-sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .info-card-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px; margin-bottom: 14px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row .label { color: var(--muted); }
+  .stat-row .val { color: var(--text); }
+  .stat-row .val.accent { color: var(--accent); }
+
+  .schedule-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 700px; margin-bottom: 20px; }
+  .schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .schedule-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .badge-pending { background: rgba(232,255,71,0.1); color: var(--accent); }
+  .badge-sent { background: rgba(71,255,184,0.1); color: var(--success); }
+  .badge-recurring { background: rgba(71,184,255,0.1); color: var(--accent2); }
+  .schedule-meta { display: flex; gap: 20px; flex-wrap: wrap; }
+  .meta-item { font-size: 12px; color: var(--muted); }
+  .meta-item strong { color: var(--text); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; animation: modalIn 0.2s ease; }
+  @keyframes modalIn { from { transform: scale(0.95) translateY(10px); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; margin-bottom: 6px; }
+  .modal-sub { color: var(--muted); font-size: 12px; margin-bottom: 24px; line-height: 1.6; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  .tag-container { min-height: 80px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; cursor: text; transition: border-color 0.2s; }
+  .tag-container:focus-within { border-color: var(--accent); }
+  .tag { display: flex; align-items: center; gap: 6px; background: rgba(232,255,71,0.1); border: 1px solid rgba(232,255,71,0.25); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--accent); }
+  .tag-remove { cursor: pointer; opacity: 0.6; font-size: 14px; line-height: 1; }
+  .tag-remove:hover { opacity: 1; }
+  .tag-input { flex: 1; min-width: 200px; background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 2px 4px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 13px; z-index: 600; display: flex; align-items: center; gap: 10px; transform: translateY(20px); opacity: 0; transition: all 0.3s; max-width: 320px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(71,255,184,0.4); }
+  .toast.error { border-color: rgba(255,71,71,0.4); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .recur-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .recur-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+  .recur-chip.active, .recur-chip:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(71,184,255,0.07); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; line-height: 1.7; }
+  #imgFileInput { display: none; }
+
+  /* MAKE.COM GUIDE */
+  .make-step { display:flex; gap:12px; align-items:flex-start; padding-bottom:14px; border-bottom:1px solid var(--border); }
+  .make-step:last-child { border-bottom:none; padding-bottom:0; }
+  .make-step-num { width:22px; height:22px; border-radius:50%; background:rgba(232,255,71,0.1); border:1px solid rgba(232,255,71,0.3); color:var(--accent); font-family:'Syne',sans-serif; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .make-step-title { font-family:'Syne',sans-serif; font-weight:600; font-size:13px; margin-bottom:4px; }
+  .make-step-body { font-size:11px; color:var(--muted); line-height:1.7; }
+  .make-module { display:flex; gap:8px; align-items:flex-start; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:11px; color:var(--muted); line-height:1.5; }
+  .warn-banner { background:rgba(232,255,71,0.06); border:1px solid rgba(232,255,71,0.2); border-radius:8px; padding:10px 14px; font-size:11px; color:var(--accent); line-height:1.7; margin-bottom:16px; display:flex; gap:10px; align-items:flex-start; }
+  .warn-banner span { flex-shrink:0; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-text">Mail<span>Forge</span></div>
+      <div class="logo-sub">Gmail Campaign Manager</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="navigate('setup')"><span class="nav-icon">⚙</span> Setup & Connect</div>
+      <div class="nav-item" onclick="navigate('lists')"><span class="nav-icon">◈</span> Email Lists</div>
+      <div class="nav-item" onclick="navigate('compose')"><span class="nav-icon">✦</span> Compose & Send</div>
+      <div class="nav-item" onclick="navigate('schedule')"><span class="nav-icon">◷</span> Scheduled</div>
+    </nav>
+    <div class="gmail-section">
+      <button class="gmail-btn" id="gmailBtn" onclick="toggleGmail()">
+        <span class="gmail-dot" id="gmailDot"></span>
+        <span id="gmailBtnText">Connect Gmail</span>
+      </button>
+      <div id="gmailEmail" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;display:none;"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Setup & <span>Connect</span></div>
+      <div style="display:flex;gap:10px;" id="topbarActions"></div>
+    </div>
+    <div class="content">
+
+      <!-- SETUP -->
+      <div class="panel active" id="panel-setup">
+        <div class="setup-hero">
+          <h2>Connect Gmail<br>in <em>3 steps</em></h2>
+          <p>MailForge uses the Gmail API via Google OAuth to send emails directly from your account. Follow the steps below — it takes about 5 minutes and only needs to be done once.</p>
+          <div class="steps">
+            <div class="step">
+              <div class="step-header"><div class="step-num">1</div><div class="step-title">Create a Google Cloud Project</div></div>
+              <p>Go to <strong style="color:var(--text)">console.cloud.google.com</strong> → Create a new project → Name it anything (e.g. "MailForge"). Then navigate to <strong style="color:var(--text)">APIs & Services → Library</strong> and enable the <strong style="color:var(--text)">Gmail API</strong>.</p>
+              <a href="https://console.cloud.google.com" target="_blank" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:12px;">↗ Open Google Cloud Console</a>
+            </div>
+            <div class="step">
+              <div class="step-header"><div class="step-num">2</div><div class="step-title">Create OAuth 2.0 Credentials</div></div>
+              <p>In your project go to <strong style="color:var(--text)">APIs & Services → Credentials → Create Credentials → OAuth Client ID</strong>. Set Application type to <strong style="color:var(--text)">Web application</strong>. Add this exact URL to <strong style="color:var(--text)">Authorised JavaScript origins</strong>:</p>
+              <div class="code-block" id="originUrl"></div>
+              <p style="margin-top:10px">Also add the same URL to <strong style="color:var(--text)">Authorised redirect URIs</strong>. Then copy your <strong style="color:var(--text)">Client ID</strong> and paste it below.</p>
+              <div class="input-row">
+                <input class="input" id="clientIdInput" placeholder="Paste your Client ID here (ends in .apps.googleusercontent.com)" />
+                <button class="btn btn-primary" onclick="saveClientId()">Save</button>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-header"><div class="step-num">3</div><div class="step-title">Authorise MailForge</div></div>
+              <p>Once your Client ID is saved, click the button below to sign in with Google and grant MailForge permission to send emails and write to Google Sheets (for Make.com scheduling).</p>
+              <button class="btn btn-primary" onclick="initiateGoogleAuth()" id="authBtn" style="opacity:0.4;cursor:not-allowed;" disabled>Sign in with Google →</button>
+              <p id="authStatus" style="margin-top:10px;font-size:11px;color:var(--success);display:none;">✓ Authorised successfully! You can now send emails.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LISTS -->
+      <div class="panel" id="panel-lists">
+        <div class="lists-grid" id="listsGrid">
+          <div class="new-list-card" onclick="openNewListModal()"><span>+</span><p>Create new<br>email list</p></div>
+        </div>
+      </div>
+
+      <!-- COMPOSE -->
+      <div class="panel" id="panel-compose">
+        <div class="compose-layout">
+          <div class="compose-form">
+            <div class="form-group">
+              <label class="form-label">To — Select List</label>
+              <select class="input" id="composeList" style="width:100%"><option value="">Choose an email list…</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input class="input" id="composeSubject" placeholder="Enter subject line…" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message Body</label>
+              <div class="editor-outer">
+                <div class="editor-wrapper">
+                  <div class="toolbar" id="toolbar">
+                    <!-- Font / Size -->
+                    <select class="tb-select" onchange="execFmt('fontName',this.value);this.selectedIndex=0;" title="Font family" style="width:88px;">
+                      <option value="" disabled selected>Font</option>
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="Georgia, serif">Georgia</option>
+                      <option value="'Courier New', monospace">Courier</option>
+                      <option value="'Times New Roman', serif">Times NR</option>
+                      <option value="Verdana, sans-serif">Verdana</option>
+                      <option value="Trebuchet MS, sans-serif">Trebuchet</option>
+                    </select>
+                    <select class="tb-select" onchange="execFmt('fontSize',this.value);this.selectedIndex=0;" title="Font size" style="width:62px;">
+                      <option value="" disabled selected>Size</option>
+                      <option value="1">8pt</option>
+                      <option value="2">10pt</option>
+                      <option value="3">12pt</option>
+                      <option value="4">14pt</option>
+                      <option value="5">18pt</option>
+                      <option value="6">24pt</option>
+                      <option value="7">36pt</option>
+                    </select>
+                    <div class="toolbar-sep"></div>
+                    <!-- Style -->
+                    <button class="tb-btn" id="tb-bold" onmousedown="e=>{e.preventDefault();}" onclick="execFmt('bold')" title="Bold"><b>B</b></button>
+                    <button class="tb-btn" id="tb-italic" onclick="execFmt('italic')" title="Italic"><i style="font-style:italic;">I</i></button>
+                    <button class="tb-btn" id="tb-underline" onclick="execFmt('underline')" title="Underline"><u>U</u></button>
+                    <button class="tb-btn" id="tb-strikeThrough" onclick="execFmt('strikeThrough')" title="Strikethrough"><s>S</s></button>
+                    <div class="toolbar-sep"></div>
+                    <!-- Colour -->
+                    <div class="tb-color-wrap" title="Text colour">
+                      <span class="tb-color-label" style="font-weight:700; text-decoration: underline; text-decoration-color:#e8ff47;">A</span>
+                      <input type="color" class="tb-color-input" value="#f0f0f8" onchange="execFmt('foreColor',this.value)" />
+                    </div>
+                    <div class="tb-color-wrap" title="Highlight colour">
+                      <span class="tb-color-label" style="background:rgba(232,255,71,0.35);border-radius:2px;padding:0 2px;font-size:11px;">ab</span>
+                      <input type="color" class="tb-color-input" value="#ffff00" onchange="execFmt('hiliteColor',this.value)" />
+                    </div>
+                    <div class="toolbar-sep"></div>
+                    <!-- Align -->
+                    <button class="tb-btn" onclick="execFmt('justifyLeft')" title="Align left">
+                      <svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="6" width="9" height="2" rx="1"/><rect x="1" y="10" width="14" height="2" rx="1"/><rect x="1" y="14" width="9" height="2" rx="1"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('justifyCenter')" title="Centre">
+                      <svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="3.5" y="6" width="9" height="2" rx="1"/><rect x="1" y="10" width="14" height="2" rx="1"/><rect x="3.5" y="14" width="9" height="2" rx="1"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('justifyRight')" title="Align right">
+                      <svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="6" y="6" width="9" height="2" rx="1"/><rect x="1" y="10" width="14" height="2" rx="1"/><rect x="6" y="14" width="9" height="2" rx="1"/></svg>
+                    </button>
+                    <div class="toolbar-sep"></div>
+                    <!-- Lists / indent -->
+                    <button class="tb-btn" onclick="execFmt('insertUnorderedList')" title="Bullet list">
+                      <svg viewBox="0 0 16 16"><circle cx="2" cy="4" r="1.5"/><rect x="5" y="3" width="10" height="2" rx="1"/><circle cx="2" cy="9" r="1.5"/><rect x="5" y="8" width="10" height="2" rx="1"/><circle cx="2" cy="14" r="1.5"/><rect x="5" y="13" width="10" height="2" rx="1"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('insertOrderedList')" title="Numbered list">
+                      <svg viewBox="0 0 16 16"><text x="0.5" y="5.5" font-size="5" fill="currentColor">1.</text><rect x="5" y="3" width="10" height="2" rx="1"/><text x="0.5" y="10.5" font-size="5" fill="currentColor">2.</text><rect x="5" y="8" width="10" height="2" rx="1"/><text x="0.5" y="15.5" font-size="5" fill="currentColor">3.</text><rect x="5" y="13" width="10" height="2" rx="1"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('indent')" title="Indent">
+                      <svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="5" y="6" width="10" height="2" rx="1"/><rect x="5" y="10" width="10" height="2" rx="1"/><rect x="1" y="14" width="14" height="2" rx="1"/><path d="M1 7.5l3 1.5-3 1.5V7.5z" fill="currentColor"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('outdent')" title="Outdent">
+                      <svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="5" y="6" width="10" height="2" rx="1"/><rect x="5" y="10" width="10" height="2" rx="1"/><rect x="1" y="14" width="14" height="2" rx="1"/><path d="M4 7.5l-3 1.5 3 1.5V7.5z" fill="currentColor"/></svg>
+                    </button>
+                    <div class="toolbar-sep"></div>
+                    <!-- Link -->
+                    <button class="tb-btn" id="linkBtn" onclick="toggleLinkPopover(event)" title="Insert link">
+                      <svg viewBox="0 0 16 16" fill="none"><path d="M6.5 9.5a3.5 3.5 0 0 0 4.95 0l2-2A3.5 3.5 0 0 0 8.5 2.55L7.44 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 6.5a3.5 3.5 0 0 0-4.95 0l-2 2A3.5 3.5 0 0 0 7.5 13.45l1.06-1.06" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('unlink')" title="Remove link">
+                      <svg viewBox="0 0 16 16" fill="none"><path d="M6.5 9.5a3.5 3.5 0 0 0 4.95 0l2-2A3.5 3.5 0 0 0 8.5 2.55L7.44 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2"/><line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
+                    <!-- Image -->
+                    <button class="tb-btn" onclick="document.getElementById('imgFileInput').click()" title="Insert image">
+                      <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="6" r="1.5" fill="currentColor"/><path d="M1 11l3.5-3.5 2.5 2.5 2-2 4 4" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                    </button>
+                    <input type="file" id="imgFileInput" accept="image/*" multiple onchange="insertImages(this)" />
+                    <div class="toolbar-sep"></div>
+                    <!-- Emoji -->
+                    <button class="tb-btn" id="emojiBtn" onclick="toggleEmojiPicker(event)" title="Insert emoji" style="font-size:16px;">😊</button>
+                    <div class="toolbar-sep"></div>
+                    <!-- Block / clear -->
+                    <button class="tb-btn" onclick="execFmt('formatBlock','blockquote')" title="Blockquote">
+                      <svg viewBox="0 0 16 16"><path d="M2 4h5v5H4L2 13V4zm7 0h5v5h-3L9 13V4z" fill="currentColor" opacity=".75"/></svg>
+                    </button>
+                    <button class="tb-btn" onclick="execFmt('removeFormat')" title="Clear formatting" style="font-size:10px; letter-spacing:-0.5px;">T✕</button>
+                  </div>
+                  <div class="editor-body" id="editorBody" contenteditable="true"
+                    data-placeholder="Write your message here… Use {name} for personalisation."></div>
+                  <div class="attach-strip" id="attachStrip"></div>
+                </div>
+
+                <!-- EMOJI PICKER (inside editor-outer for positioning) -->
+                <div class="emoji-picker" id="emojiPicker">
+                  <div class="emoji-cats" id="emojiCats"></div>
+                  <div class="emoji-grid" id="emojiGrid"></div>
+                </div>
+
+                <!-- LINK POPOVER -->
+                <div class="link-popover" id="linkPopover">
+                  <div class="link-popover-title">Insert Hyperlink</div>
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Display Text</label>
+                    <input class="input" id="linkText" placeholder="Link text (leave blank to use URL)" style="width:100%" />
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">URL</label>
+                    <input class="input" id="linkUrl" placeholder="https://example.com" style="width:100%" onkeydown="if(event.key==='Enter')insertLink()" />
+                  </div>
+                  <div class="link-row">
+                    <button class="btn btn-ghost" onclick="closeLinkPopover()">Cancel</button>
+                    <button class="btn btn-primary" onclick="insertLink()">Insert →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border);padding-top:20px;margin-top:4px;">
+              <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:14px;margin-bottom:14px;">Schedule Options</div>
+              <div class="form-group">
+                <label class="form-label">Send Date & Time</label>
+                <input class="input" id="composeDateTime" type="datetime-local" style="width:100%;color-scheme:dark;" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Repeat</label>
+                <div class="recur-options" id="recurOptions">
+                  <button class="recur-chip active" data-val="none">No repeat</button>
+                  <button class="recur-chip" data-val="daily">Daily</button>
+                  <button class="recur-chip" data-val="weekly">Weekly</button>
+                  <button class="recur-chip" data-val="monthly">Monthly</button>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+              <button class="btn btn-primary" onclick="scheduleCampaign()" style="flex:1">Schedule Campaign →</button>
+              <button class="btn btn-ghost" onclick="sendNow()">Send Now</button>
+            </div>
+          </div>
+
+          <div class="compose-sidebar">
+            <div class="info-card">
+              <div class="info-card-title">List Preview</div>
+              <div id="listPreviewContent"><div style="color:var(--muted);font-size:12px;">Select a list to preview recipients.</div></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Formatting Tips</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.9;">
+                • Use <strong style="color:var(--accent2)">{name}</strong> for personalisation<br>
+                • Full HTML email is sent ✓<br>
+                • Images embed inline<br>
+                • Free Gmail: 500/day<br>
+                • Workspace: 2,000/day
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="panel" id="panel-schedule">
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;max-width:1100px;align-items:start;">
+
+          <!-- LEFT: campaign list -->
+          <div>
+            <div class="warn-banner"><span>⚠</span><div>Scheduled sends <strong>only fire while this tab is open</strong>. Set up the Make.com integration on the right to send reliably in the background — even when the tab is closed.</div></div>
+            <div id="scheduleList">
+              <div class="empty-state"><div class="icon">◷</div><p>No scheduled campaigns yet.<br>Head to Compose & Send to schedule one.</p></div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Make.com setup guide -->
+          <div style="display:flex;flex-direction:column;gap:14px;">
+
+            <!-- Sheets config card -->
+            <div class="info-card">
+              <div class="info-card-title" style="color:var(--accent);">⚡ Make.com Integration</div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px;">Connect a Google Sheet so Make.com can reliably fire your scheduled sends — even when this tab is closed.</p>
+
+              <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Google Sheet ID</label>
+                <input class="input" id="sheetIdInput" placeholder="Paste Sheet ID from the URL…" style="width:100%;" />
+                <div style="font-size:10px;color:var(--muted);margin-top:5px;">Found between /d/ and /edit in your Sheet URL</div>
+              </div>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label">Sheet Name (tab)</label>
+                <input class="input" id="sheetNameInput" placeholder="e.g. Campaigns" value="Campaigns" style="width:100%;" />
+              </div>
+              <button class="btn btn-primary" onclick="saveSheetConfig()" style="width:100%;">Save Sheet Config →</button>
+              <div id="sheetStatus" style="display:none;margin-top:10px;font-size:11px;color:var(--success);">✓ Sheet configured</div>
+            </div>
+
+            <!-- Step by step guide -->
+            <div class="info-card">
+              <div class="info-card-title">Setup Guide</div>
+              <div style="display:flex;flex-direction:column;gap:12px;">
+
+                <div class="make-step">
+                  <div class="make-step-num">1</div>
+                  <div>
+                    <div class="make-step-title">Create a Google Sheet</div>
+                    <div class="make-step-body">Create a new Google Sheet. Name the first tab <strong style="color:var(--text)">Campaigns</strong>. Add these exact headers in row 1:</div>
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-top:6px;font-size:10px;color:var(--accent2);line-height:1.9;">
+                      id | listName | emails | subject | body | sendAt | recur | status
+                    </div>
+                    <button class="btn btn-ghost" style="margin-top:8px;font-size:11px;padding:5px 10px;" onclick="copyHeaders()">Copy Headers</button>
+                  </div>
+                </div>
+
+                <div class="make-step">
+                  <div class="make-step-num">2</div>
+                  <div>
+                    <div class="make-step-title">Sign up for Make.com</div>
+                    <div class="make-step-body">Create a free account at make.com — the free tier gives you 1,000 operations/month which is plenty for scheduling emails.</div>
+                    <a href="https://make.com" target="_blank" class="btn btn-ghost" style="display:inline-flex;margin-top:8px;font-size:11px;padding:5px 10px;text-decoration:none;">↗ Go to Make.com</a>
+                  </div>
+                </div>
+
+                <div class="make-step">
+                  <div class="make-step-num">3</div>
+                  <div>
+                    <div class="make-step-title">Create a Scenario</div>
+                    <div class="make-step-body">In Make, create a new Scenario with these 3 modules in order:</div>
+                    <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                      <div class="make-module">
+                        <span style="color:var(--accent);">①</span>
+                        <span><strong style="color:var(--text);">Schedule</strong> — set to every 15 minutes</span>
+                      </div>
+                      <div class="make-module">
+                        <span style="color:var(--accent);">②</span>
+                        <span><strong style="color:var(--text);">Google Sheets → Search Rows</strong> — filter where <code style="color:var(--accent2);">status = pending</code> AND <code style="color:var(--accent2);">sendAt &lt;= now</code></span>
+                      </div>
+                      <div class="make-module">
+                        <span style="color:var(--accent);">③</span>
+                        <span><strong style="color:var(--text);">Gmail → Send an Email</strong> — map subject, body (HTML), recipients from the row</span>
+                      </div>
+                      <div class="make-module">
+                        <span style="color:var(--accent);">④</span>
+                        <span><strong style="color:var(--text);">Google Sheets → Update a Row</strong> — set status to <code style="color:var(--accent2);">sent</code></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="make-step">
+                  <div class="make-step-num">4</div>
+                  <div>
+                    <div class="make-step-title">Paste the Sheet ID above</div>
+                    <div class="make-step-body">Copy the ID from your Sheet URL and paste it in the field above. MailForge will then write all scheduled campaigns directly to that sheet for Make to pick up.</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Export button -->
+            <div class="info-card">
+              <div class="info-card-title">Export Pending Campaigns</div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px;">Download your pending campaigns as a CSV to manually paste into Google Sheets, or push them directly if your Sheet is configured.</p>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="exportToCSV()" style="flex:1;font-size:11px;">↓ Download CSV</button>
+                <button class="btn btn-ghost" onclick="pushToSheets()" style="flex:1;font-size:11px;">↑ Push to Sheets</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: New/Edit List -->
+<div class="modal-overlay" id="listModal">
+  <div class="modal">
+    <div class="modal-title" id="listModalTitle">Create Email List</div>
+    <div class="modal-sub">Give your list a name and add recipient emails. Press Enter or comma to add each address.</div>
+    <div class="form-group">
+      <label class="form-label">List Name</label>
+      <input class="input" id="listNameInput" placeholder="e.g. Newsletter, VIP Clients…" style="width:100%" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email Addresses</label>
+      <div class="tag-container" id="tagContainer" onclick="document.getElementById('tagInput').focus()">
+        <input class="tag-input" id="tagInput" placeholder="type email and press Enter…" />
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Press Enter or comma after each address. Paste a comma-separated list to bulk-add.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('listModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveList()">Save List →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: View List -->
+<div class="modal-overlay" id="viewListModal">
+  <div class="modal">
+    <div class="modal-title" id="viewListName">—</div>
+    <div class="modal-sub" id="viewListCount">—</div>
+    <div id="viewListEmails" style="font-size:12px;color:var(--muted);line-height:1.9;max-height:300px;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('viewListModal')">Close</button>
+      <button class="btn btn-primary" onclick="composeToList()">Compose to List →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg"></span></div>
+
+<script>
+// ==================== STATE ====================
+const state = {
+  clientId: localStorage.getItem('mf_clientId') || '',
+  accessToken: '', userEmail: '',
+  lists: JSON.parse(localStorage.getItem('mf_lists') || '[]'),
+  scheduled: JSON.parse(localStorage.getItem('mf_scheduled') || '[]'),
+  savedRange: null,
+};
+
+// ==================== EMOJI DATA ====================
+const emojiData = {
+  '😀': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝','🤑','🤗','🤔','😐','😑','😏','😒','🙄','😬','😌','😴','😷','🤒','🥴','🥵','😎','🤓','🧐'],
+  '👋': ['👋','🤚','🖐','✋','🖖','👌','🤌','✌','🤞','🤟','🤘','🤙','👍','👎','👏','🙌','🤲','🤝','🙏','💪','💅','✍','🫶','❤️‍🔥'],
+  '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','🔥','⭐','✨','💫','🌟','⚡','🌈','🎯','🏆'],
+  '🎉': ['🎉','🎊','🎈','🎁','🎀','🏆','🥇','🥈','🥉','🎖','🎯','🎮','🎲','🎭','🎨','🎪','🎟','🎫','🥳','🪄','🪅'],
+  '🐶': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐸','🐵','🙈','🐔','🐧','🐦','🦆','🦅','🦉','🐺','🦄','🐉','🌸','🌺','🌻','🌹','🍀'],
+  '🍕': ['🍕','🍔','🌮','🌯','🥗','🍜','🍣','🍱','🍛','🍝','🍟','🌭','🥪','🥚','🍳','🧇','🥞','🍗','🍖','🦐','🦞','🦀','🍰','🎂','🍩','🍪','🍫','🍬','🍭','🧁'],
+  '🚀': ['🚀','✈️','🛸','🛩','🚁','🚂','🚄','🚗','🚕','🛻','🚌','🛳','⛵','🏖','🏔','🗺','🌍','🌙','☀️','🌤','⛅','🌦','🌧','⛈','🌩','🌨'],
+  '📱': ['📱','💻','🖥','🖨','⌨','🖱','💽','💾','💿','📀','📷','📸','📹','📺','📻','🧭','⏱','⏰','📡','🔋','🔌','💡','🔦','🔬','🔭','📝','📋','📁','📂'],
+};
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('originUrl').textContent = window.location.origin;
+  if (state.clientId) { document.getElementById('clientIdInput').value = state.clientId; enableAuthBtn(); }
+  renderLists(); renderSchedule(); updateComposeListSelect(); setupRecurChips();
+  const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('composeDateTime').min = now.toISOString().slice(0,16);
+  document.getElementById('composeDateTime').value = now.toISOString().slice(0,16);
+  document.getElementById('tagInput').addEventListener('keydown', handleTagInput);
+  document.getElementById('tagInput').addEventListener('paste', handleTagPaste);
+  document.getElementById('composeList').addEventListener('change', updateListPreview);
+  checkOAuthReturn(); checkSchedules();
+  initSheetConfig();
+  buildEmojiPicker();
+  setupToolbarStateUpdater();
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('#emojiPicker') && !e.target.closest('#emojiBtn')) closeEmojiPicker();
+    if (!e.target.closest('#linkPopover') && !e.target.closest('#linkBtn')) closeLinkPopover();
+  });
+});
+
+// ==================== NAV ====================
+const pageTitles = { setup:'Setup & <span>Connect</span>', lists:'Email <span>Lists</span>', compose:'Compose & <span>Send</span>', schedule:'<span>Scheduled</span> Campaigns' };
+const topbarActions = { lists:'<button class="btn btn-primary" onclick="openNewListModal()">+ New List</button>', schedule:'<button class="btn btn-ghost" onclick="clearSentSchedules()">Clear Sent</button>' };
+function navigate(page) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.textContent.trim().toLowerCase().includes(page==='setup'?'setup':page==='lists'?'list':page==='compose'?'compose':'schedul')) n.classList.add('active'); });
+  document.getElementById('pageTitle').innerHTML = pageTitles[page];
+  document.getElementById('topbarActions').innerHTML = topbarActions[page]||'';
+}
+
+// ==================== RICH TEXT EDITOR ====================
+function execFmt(cmd, val) {
+  const ed = document.getElementById('editorBody');
+  ed.focus();
+  document.execCommand(cmd, false, val || null);
+  updateToolbarState();
+}
+
+function setupToolbarStateUpdater() {
+  const ed = document.getElementById('editorBody');
+  ['keyup','mouseup','focus'].forEach(ev => ed.addEventListener(ev, updateToolbarState));
+}
+
+function updateToolbarState() {
+  ['bold','italic','underline','strikeThrough'].forEach(cmd => {
+    const btn = document.getElementById('tb-'+cmd);
+    if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+  });
+}
+
+// Save selection so emoji/link can restore it after focus moves
+function saveEditorSelection() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) state.savedRange = sel.getRangeAt(0).cloneRange();
+}
+function restoreEditorSelection() {
+  if (!state.savedRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(state.savedRange);
+}
+document.getElementById('editorBody') && document.addEventListener('selectionchange', () => {
+  const ed = document.getElementById('editorBody');
+  if (document.activeElement === ed || ed.contains(document.activeElement)) saveEditorSelection();
+});
+
+// ---- EMOJI ----
+function buildEmojiPicker() {
+  const cats = document.getElementById('emojiCats');
+  const keys = Object.keys(emojiData);
+  keys.forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-cat-btn' + (i===0?' active':'');
+    btn.textContent = cat; btn.title = cat;
+    btn.onclick = () => { document.querySelectorAll('.emoji-cat-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderEmojiGrid(cat); };
+    cats.appendChild(btn);
+  });
+  renderEmojiGrid(keys[0]);
+}
+function renderEmojiGrid(cat) {
+  const grid = document.getElementById('emojiGrid'); grid.innerHTML = '';
+  emojiData[cat].forEach(em => {
+    const btn = document.createElement('button'); btn.className='emoji-btn'; btn.textContent=em;
+    btn.onclick = () => { insertEmoji(em); };
+    grid.appendChild(btn);
+  });
+}
+function toggleEmojiPicker(e) {
+  e && e.preventDefault();
+  const picker = document.getElementById('emojiPicker');
+  if (picker.classList.contains('open')) { closeEmojiPicker(); return; }
+  closeLinkPopover();
+  saveEditorSelection();
+  const btn = document.getElementById('emojiBtn');
+  const outerRect = document.querySelector('.editor-outer').getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  picker.style.top = (btnRect.bottom - outerRect.top + 4) + 'px';
+  const leftPos = Math.min(btnRect.left - outerRect.left, outerRect.width - 305);
+  picker.style.left = Math.max(0, leftPos) + 'px';
+  picker.classList.add('open');
+}
+function closeEmojiPicker() { document.getElementById('emojiPicker').classList.remove('open'); }
+function insertEmoji(emoji) {
+  restoreEditorSelection();
+  const ed = document.getElementById('editorBody'); ed.focus();
+  document.execCommand('insertText', false, emoji);
+  closeEmojiPicker();
+}
+
+// ---- LINK ----
+function toggleLinkPopover(e) {
+  e && e.preventDefault();
+  const pop = document.getElementById('linkPopover');
+  if (pop.classList.contains('open')) { closeLinkPopover(); return; }
+  closeEmojiPicker();
+  saveEditorSelection();
+  const sel = window.getSelection();
+  document.getElementById('linkText').value = sel ? sel.toString() : '';
+  document.getElementById('linkUrl').value = '';
+  const btn = document.getElementById('linkBtn');
+  const outerRect = document.querySelector('.editor-outer').getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  pop.style.top = (btnRect.bottom - outerRect.top + 4) + 'px';
+  const leftPos = Math.min(btnRect.left - outerRect.left, outerRect.width - 318);
+  pop.style.left = Math.max(0, leftPos) + 'px';
+  pop.classList.add('open');
+  setTimeout(() => document.getElementById('linkUrl').focus(), 60);
+}
+function closeLinkPopover() { document.getElementById('linkPopover').classList.remove('open'); }
+function insertLink() {
+  const url = document.getElementById('linkUrl').value.trim();
+  if (!url) { showToast('Please enter a URL','error'); return; }
+  const text = document.getElementById('linkText').value.trim();
+  const href = url.startsWith('http') ? url : 'https://' + url;
+  restoreEditorSelection();
+  const ed = document.getElementById('editorBody'); ed.focus();
+  const sel = window.getSelection();
+  if (sel && sel.toString().length > 0) {
+    document.execCommand('createLink', false, href);
+    // Make it open in new tab
+    try { sel.anchorNode.parentElement.target = '_blank'; } catch(e){}
+  } else {
+    const display = text || href;
+    document.execCommand('insertHTML', false, `<a href="${href}" target="_blank">${escHtml(display)}</a>`);
+  }
+  closeLinkPopover();
+}
+
+// ---- IMAGES ----
+function insertImages(input) {
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      restoreEditorSelection();
+      const ed = document.getElementById('editorBody'); ed.focus();
+      document.execCommand('insertHTML', false, `<img src="${ev.target.result}" alt="${escHtml(file.name)}" style="max-width:100%;border-radius:6px;margin:6px 0;display:block;" />`);
+      addAttachChip(file.name, ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+function addAttachChip(name, src) {
+  const strip = document.getElementById('attachStrip'); strip.classList.add('has-items');
+  const chip = document.createElement('div'); chip.className='attach-chip'; chip.dataset.name=name;
+  chip.innerHTML = `<img src="${src}" /><span>${escHtml(name)}</span><span class="rm" onclick="removeAttach(this,'${name.replace(/'/g,"\\'")}')">×</span>`;
+  strip.appendChild(chip);
+}
+function removeAttach(btn, name) {
+  btn.closest('.attach-chip').remove();
+  const strip = document.getElementById('attachStrip');
+  if (!strip.querySelectorAll('.attach-chip').length) strip.classList.remove('has-items');
+  document.querySelectorAll('#editorBody img').forEach(img => { if(img.alt===name) img.remove(); });
+}
+
+// ==================== AUTH ====================
+function saveClientId() { const v=document.getElementById('clientIdInput').value.trim(); if(!v){showToast('Please enter a Client ID','error');return;} state.clientId=v; localStorage.setItem('mf_clientId',v); enableAuthBtn(); showToast('Client ID saved!'); }
+function enableAuthBtn() { const btn=document.getElementById('authBtn'); btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
+function initiateGoogleAuth() {
+  if(!state.clientId){showToast('Save your Client ID first','error');return;}
+  const p=new URLSearchParams({client_id:state.clientId,redirect_uri:window.location.origin+window.location.pathname,response_type:'token',scope:'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/spreadsheets',include_granted_scopes:'true',state:'gmail_auth'});
+  window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
+}
+function checkOAuthReturn() {
+  const hash=window.location.hash; if(!hash||!hash.includes('access_token')) return;
+  const p=new URLSearchParams(hash.substring(1)); const token=p.get('access_token');
+  if(token&&p.get('state')==='gmail_auth'){state.accessToken=token;window.history.replaceState({},'',window.location.pathname);fetchUserEmail(token);}
+}
+function fetchUserEmail(token) {
+  fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+token}})
+    .then(r=>r.json()).then(d=>{state.userEmail=d.email||'';updateGmailUI(true);showToast('Connected as '+state.userEmail);document.getElementById('authStatus').style.display='block';navigate('lists');})
+    .catch(()=>showToast('Could not fetch user info','error'));
+}
+function toggleGmail() { if(state.accessToken){state.accessToken='';state.userEmail='';updateGmailUI(false);showToast('Disconnected');}else navigate('setup'); }
+function updateGmailUI(connected) {
+  const dot=document.getElementById('gmailDot'),btn=document.getElementById('gmailBtn'),el=document.getElementById('gmailEmail'),txt=document.getElementById('gmailBtnText');
+  if(connected){dot.classList.add('connected');btn.classList.add('connected');txt.textContent='Connected ✓';el.textContent=state.userEmail;el.style.display='block';}
+  else{dot.classList.remove('connected');btn.classList.remove('connected');txt.textContent='Connect Gmail';el.style.display='none';}
+}
+
+// ==================== LISTS ====================
+let editingListId=null,currentTags=[];
+function openNewListModal(id) {
+  editingListId=id||null;currentTags=[];
+  document.getElementById('tagContainer').innerHTML='<input class="tag-input" id="tagInput" placeholder="type email and press Enter…" />';
+  document.getElementById('tagInput').addEventListener('keydown',handleTagInput);
+  document.getElementById('tagInput').addEventListener('paste',handleTagPaste);
+  document.getElementById('listNameInput').value='';
+  document.getElementById('listModalTitle').textContent=id?'Edit Email List':'Create Email List';
+  if(id){const l=state.lists.find(l=>l.id===id);if(l){document.getElementById('listNameInput').value=l.name;l.emails.forEach(addTag);}}
+  document.getElementById('listModal').classList.add('open');
+  setTimeout(()=>document.getElementById('listNameInput').focus(),100);
+}
+function handleTagInput(e){if(e.key==='Enter'||e.key===','){e.preventDefault();const v=e.target.value.trim().replace(/,/g,'');if(v)tryAddEmail(v);e.target.value='';}else if(e.key==='Backspace'&&!e.target.value&&currentTags.length)removeTag(currentTags[currentTags.length-1]);}
+function handleTagPaste(e){e.preventDefault();(e.clipboardData||window.clipboardData).getData('text').split(/[\s,;]+/).filter(x=>x).forEach(em=>tryAddEmail(em.trim()));}
+function tryAddEmail(email){const re=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;if(!re.test(email)){showToast(email+' is not valid','error');return;}if(currentTags.includes(email)){showToast('Already added','error');return;}addTag(email);}
+function addTag(email){currentTags.push(email);const t=document.createElement('div');t.className='tag';t.dataset.email=email;t.innerHTML=email+'<span class="tag-remove" onclick="removeTag(\''+email.replace(/'/g,"\\'")+'\')" >×</span>';document.getElementById('tagContainer').insertBefore(t,document.getElementById('tagInput'));}
+function removeTag(email){currentTags=currentTags.filter(e=>e!==email);document.getElementById('tagContainer').querySelectorAll('.tag').forEach(t=>{if(t.dataset.email===email)t.remove();});}
+function saveList(){
+  const name=document.getElementById('listNameInput').value.trim();
+  if(!name){showToast('Enter a list name','error');return;}if(!currentTags.length){showToast('Add at least one email','error');return;}
+  if(editingListId){const idx=state.lists.findIndex(l=>l.id===editingListId);state.lists[idx]={...state.lists[idx],name,emails:[...currentTags]};}
+  else state.lists.push({id:'list_'+Date.now(),name,emails:[...currentTags],created:Date.now()});
+  persist();renderLists();updateComposeListSelect();closeModal('listModal');showToast(editingListId?'List updated!':'List created!');
+}
+function deleteList(id){if(!confirm('Delete this list?'))return;state.lists=state.lists.filter(l=>l.id!==id);persist();renderLists();updateComposeListSelect();showToast('List deleted');}
+function renderLists(){
+  const grid=document.getElementById('listsGrid');
+  grid.innerHTML='<div class="new-list-card" onclick="openNewListModal()"><span>+</span><p>Create new<br>email list</p></div>';
+  state.lists.forEach(list=>{
+    const preview=list.emails.slice(0,3).join(', ')+(list.emails.length>3?', …':'');
+    const card=document.createElement('div');card.className='list-card';
+    card.innerHTML=`<div class="list-card-header"><div class="list-name">${escHtml(list.name)}</div><div class="list-count">${list.emails.length} recipients</div></div><div class="list-preview">${escHtml(preview)}</div><div class="list-actions"><button class="btn-small accent" onclick="viewList('${list.id}')">View</button><button class="btn-small" onclick="openNewListModal('${list.id}')">Edit</button><button class="btn-small" onclick="composeToListId('${list.id}')">Compose →</button><button class="btn btn-danger" onclick="deleteList('${list.id}')">Delete</button></div>`;
+    grid.appendChild(card);
+  });
+}
+let viewingListId=null;
+function viewList(id){const l=state.lists.find(l=>l.id===id);if(!l)return;viewingListId=id;document.getElementById('viewListName').textContent=l.name;document.getElementById('viewListCount').textContent=l.emails.length+' recipients';document.getElementById('viewListEmails').innerHTML=l.emails.map(e=>`<div style="padding:3px 0;border-bottom:1px solid var(--border);">${escHtml(e)}</div>`).join('');document.getElementById('viewListModal').classList.add('open');}
+function composeToList(){if(viewingListId)composeToListId(viewingListId);}
+function composeToListId(id){closeModal('viewListModal');navigate('compose');document.getElementById('composeList').value=id;updateListPreview();}
+function updateComposeListSelect(){const sel=document.getElementById('composeList');const cur=sel.value;sel.innerHTML='<option value="">Choose an email list…</option>';state.lists.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.name+' ('+l.emails.length+')';sel.appendChild(o);});if(cur)sel.value=cur;}
+function updateListPreview(){const id=document.getElementById('composeList').value;const list=state.lists.find(l=>l.id===id);const el=document.getElementById('listPreviewContent');if(!list){el.innerHTML='<div style="color:var(--muted);font-size:12px;">Select a list to preview recipients.</div>';return;}el.innerHTML=`<div class="stat-row"><span class="label">List</span><span class="val">${escHtml(list.name)}</span></div><div class="stat-row"><span class="label">Recipients</span><span class="val accent">${list.emails.length}</span></div>${list.emails.slice(0,4).map(e=>`<div class="stat-row"><span class="label" style="font-size:11px;">${escHtml(e)}</span></div>`).join('')}${list.emails.length>4?`<div style="font-size:11px;color:var(--muted);padding-top:6px;">+${list.emails.length-4} more…</div>`:''}`;}
+
+// ==================== SEND / SCHEDULE ====================
+let selectedRecur='none';
+function setupRecurChips(){document.querySelectorAll('.recur-chip').forEach(chip=>{chip.addEventListener('click',()=>{document.querySelectorAll('.recur-chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');selectedRecur=chip.dataset.val;});});}
+function getBody(){return document.getElementById('editorBody').innerHTML.trim();}
+function scheduleCampaign(){
+  const listId=document.getElementById('composeList').value;const subject=document.getElementById('composeSubject').value.trim();const body=getBody();const dt=document.getElementById('composeDateTime').value;
+  if(!listId){showToast('Select a list','error');return;}if(!subject){showToast('Enter a subject','error');return;}if(!body||body==='<br>'){showToast('Write a message','error');return;}if(!dt){showToast('Pick a date & time','error');return;}
+  const list=state.lists.find(l=>l.id===listId);
+  state.scheduled.push({id:'sch_'+Date.now(),listId,listName:list.name,subject,body,sendAt:new Date(dt).getTime(),recur:selectedRecur,status:'pending',created:Date.now(),isHtml:true});
+  persist();renderSchedule();showToast('Campaign scheduled!');navigate('schedule');
+}
+function sendNow(){
+  if(!state.accessToken){showToast('Connect Gmail first (Setup & Connect)','error');return;}
+  const listId=document.getElementById('composeList').value;const subject=document.getElementById('composeSubject').value.trim();const body=getBody();
+  if(!listId){showToast('Select a list','error');return;}if(!subject){showToast('Enter a subject','error');return;}if(!body||body==='<br>'){showToast('Write a message','error');return;}
+  const list=state.lists.find(l=>l.id===listId);if(!list)return;
+  showToast('Sending to '+list.emails.length+' recipients…');
+  sendToList(list,subject,body,true).then(c=>showToast('Sent to '+c+' recipients!')).catch(e=>showToast('Send error: '+e.message,'error'));
+}
+async function sendToList(list,subject,body,isHtml){let count=0;for(const email of list.emails){const p=body.replace(/\{name\}/gi,email.split('@')[0]);await sendEmail(email,subject,p,isHtml);count++;await sleep(300);}return count;}
+async function sendEmail(to,subject,body,isHtml){
+  const ct=isHtml?'text/html; charset=utf-8':'text/plain; charset=utf-8';
+  const msg=['From: '+state.userEmail,'To: '+state.userEmail,'Bcc: '+to,'Subject: '+subject,'Content-Type: '+ct,'MIME-Version: 1.0','',body].join('\r\n');
+  const enc=btoa(unescape(encodeURIComponent(msg))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const res=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+state.accessToken,'Content-Type':'application/json'},body:JSON.stringify({raw:enc})});
+  if(!res.ok){const err=await res.json();throw new Error(err.error?.message||'API error');}
+  return await res.json();
+}
+function checkSchedules(){const now=Date.now();state.scheduled.forEach(s=>{if(s.status==='pending'&&s.sendAt<=now){if(!state.accessToken)return;const list=state.lists.find(l=>l.id===s.listId);if(!list){s.status='error';return;}s.status='sending';sendToList(list,s.subject,s.body,s.isHtml).then(c=>{s.status='sent';s.sentAt=Date.now();if(s.recur!=='none')state.scheduled.push({...s,id:'sch_'+Date.now(),status:'pending',sendAt:nextSendAt(s.sendAt,s.recur)});persist();renderSchedule();showToast('Scheduled campaign sent: '+s.subject);}).catch(()=>{s.status='error';persist();renderSchedule();});}});}
+function nextSendAt(prev,recur){const d=new Date(prev);if(recur==='daily')d.setDate(d.getDate()+1);else if(recur==='weekly')d.setDate(d.getDate()+7);else if(recur==='monthly')d.setMonth(d.getMonth()+1);return d.getTime();}
+function renderSchedule(){
+  const el=document.getElementById('scheduleList');
+  if(!state.scheduled.length){el.innerHTML='<div class="empty-state"><div class="icon">◷</div><p>No scheduled campaigns yet.<br>Head to Compose & Send to schedule one.</p></div>';return;}
+  el.innerHTML=[...state.scheduled].sort((a,b)=>b.created-a.created).map(s=>{
+    const badge=s.status==='sent'?'<span class="badge badge-sent">Sent</span>':s.recur!=='none'?'<span class="badge badge-recurring">Recurring</span>':'<span class="badge badge-pending">Pending</span>';
+    return `<div class="schedule-card"><div class="schedule-header"><div class="schedule-title">${escHtml(s.subject)}</div>${badge}</div><div class="schedule-meta"><div class="meta-item">List: <strong>${escHtml(s.listName)}</strong></div><div class="meta-item">Send at: <strong>${new Date(s.sendAt).toLocaleString()}</strong></div>${s.recur!=='none'?`<div class="meta-item">Repeat: <strong>${s.recur}</strong></div>`:''} ${s.status==='sent'?`<div class="meta-item" style="color:var(--success)">✓ Sent ${new Date(s.sentAt).toLocaleString()}</div>`:''}</div><div style="margin-top:14px;"><button class="btn btn-danger" onclick="deleteSchedule('${s.id}')">Delete</button></div></div>`;
+  }).join('');
+}
+function deleteSchedule(id){state.scheduled=state.scheduled.filter(s=>s.id!==id);persist();renderSchedule();showToast('Schedule removed');}
+function clearSentSchedules(){state.scheduled=state.scheduled.filter(s=>s.status!=='sent');persist();renderSchedule();showToast('Cleared sent campaigns');}
+
+// ==================== MAKE.COM / SHEETS ====================
+const sheetConfig = {
+  id: localStorage.getItem('mf_sheetId') || '',
+  name: localStorage.getItem('mf_sheetName') || 'Campaigns',
+};
+
+function initSheetConfig() {
+  if (sheetConfig.id) {
+    document.getElementById('sheetIdInput').value = sheetConfig.id;
+    document.getElementById('sheetNameInput').value = sheetConfig.name;
+    document.getElementById('sheetStatus').style.display = 'block';
+  }
+}
+
+function saveSheetConfig() {
+  const id = document.getElementById('sheetIdInput').value.trim();
+  const name = document.getElementById('sheetNameInput').value.trim() || 'Campaigns';
+  if (!id) { showToast('Paste your Sheet ID', 'error'); return; }
+  sheetConfig.id = id; sheetConfig.name = name;
+  localStorage.setItem('mf_sheetId', id);
+  localStorage.setItem('mf_sheetName', name);
+  document.getElementById('sheetStatus').style.display = 'block';
+  showToast('Sheet config saved!');
+}
+
+function copyHeaders() {
+  const headers = 'id\tlistName\temails\tsubject\tbody\tsendAt\trecur\tstatus';
+  navigator.clipboard.writeText(headers).then(() => showToast('Headers copied — paste into row 1 of your sheet')).catch(() => showToast('Copy failed — try manually', 'error'));
+}
+
+function exportToCSV() {
+  const pending = state.scheduled.filter(s => s.status === 'pending');
+  if (!pending.length) { showToast('No pending campaigns to export', 'error'); return; }
+  const rows = [['id','listName','emails','subject','body','sendAt','recur','status']];
+  pending.forEach(s => {
+    const list = state.lists.find(l => l.id === s.listId);
+    const emails = list ? list.emails.join(';') : '';
+    // Strip HTML tags from body for CSV preview, keep full for sheet
+    rows.push([s.id, s.listName, emails, s.subject, s.body.replace(/"/g,'""'), new Date(s.sendAt).toISOString(), s.recur, s.status]);
+  });
+  const csv = rows.map(r => r.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mailforge-campaigns.csv'; a.click();
+  showToast('CSV downloaded — paste into your Google Sheet');
+}
+
+async function pushToSheets() {
+  if (!state.accessToken) { showToast('Connect Gmail first — we use the same Google token', 'error'); return; }
+  if (!sheetConfig.id) { showToast('Save your Sheet ID first', 'error'); return; }
+  const pending = state.scheduled.filter(s => s.status === 'pending');
+  if (!pending.length) { showToast('No pending campaigns to push', 'error'); return; }
+
+  showToast('Pushing to Google Sheets…');
+
+  const values = pending.map(s => {
+    const list = state.lists.find(l => l.id === s.listId);
+    const emails = list ? list.emails.join(';') : '';
+    return [s.id, s.listName, emails, s.subject, s.body, new Date(s.sendAt).toISOString(), s.recur, s.status];
+  });
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetConfig.id}/values/${encodeURIComponent(sheetConfig.name)}!A2:H${values.length+1}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      // If scope missing, explain clearly
+      if (err.error?.status === 'PERMISSION_DENIED') {
+        showToast('Need Sheets permission — re-authorise in Setup with the Sheets scope', 'error');
+      } else {
+        showToast('Sheets error: ' + (err.error?.message || 'unknown'), 'error');
+      }
+      return;
+    }
+    showToast(`${values.length} campaign(s) pushed to Google Sheets ✓`);
+  } catch(e) {
+    showToast('Push failed: ' + e.message, 'error');
+  }
+}
+
+// ==================== HELPERS ====================
+function persist(){localStorage.setItem('mf_lists',JSON.stringify(state.lists));localStorage.setItem('mf_scheduled',JSON.stringify(state.scheduled));}
+function escHtml(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showToast(msg,type='success'){const t=document.getElementById('toast');document.getElementById('toastIcon').textContent=type==='error'?'✕':'✓';document.getElementById('toastMsg').textContent=msg;t.className='toast show '+type;setTimeout(()=>t.className='toast',3000);}
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
+</script>
+</body>
+</html>
